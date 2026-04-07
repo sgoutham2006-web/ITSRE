@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>AI Academic Analytics Dashboard</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/brain.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-light: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --card-bg: #ffffff;
+            --card-border: #e2e8f0;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --success-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --text-heading: #0f172a;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --input-bg: #f1f5f9;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg-light);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--card-border);
+            padding: 30px 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.02);
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .logo svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 400;
+            margin-bottom: 40px;
+        }
+
+        .nav-item {
+            padding: 12px 15px;
+            border-radius: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(37, 99, 235, 0.1);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .logout {
+            padding: 14px;
+            border: none;
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .logout:hover {
+            background: var(--danger);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Decorative background elements */
+        .main::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #dbeafe, #e0e7ff);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .main::after {
+            content: '';
+            position: absolute;
+            bottom: -50px;
+            left: 20%;
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #fce7f3, #fae8ff);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Container for content to sit above decorative blurs */
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 2fr 1.2fr;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-bottom: 30px;
+            grid-column: 1 / -1;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--text-heading);
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-weight: 400;
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 20px 40px -12px rgba(15, 23, 42, 0.06);
+            height: fit-content;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card h2,
+        .card h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-heading);
+        }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-heading);
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.23);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.save {
+            background: var(--success);
+        }
+
+        button.save:hover {
+            background: var(--success-hover);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.23);
+        }
+
+        /* Results Area */
+        .results-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid var(--card-border);
+            display: none;
+        }
+
+        .results-container.active {
+            display: grid;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #result {
+            background: var(--input-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-main);
+        }
+
+        #result h3 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--card-border);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        #result h4 {
+            color: #d97706;
+            /* Warmer tone for light mode */
+            margin: 20px 0 10px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .metric-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background: #ffffff;
+            border: 1px solid var(--card-border);
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            color: var(--text-heading);
+        }
+
+        .chart-container {
+            background: var(--input-bg);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+        }
+
+        canvas {
+            max-height: 250px;
+        }
+
+        /* Student List */
+        .student-item {
+            background: var(--input-bg);
+            padding: 15px 20px;
+            border-radius: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .student-item:hover {
+            background: #ffffff;
+            border-color: var(--card-border);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+            transform: translateX(4px);
+        }
+
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .student-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: white;
+        }
+
+        .delete {
+            background: transparent;
+            border: none;
+            padding: 8px;
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex: 0 0 auto;
+            box-shadow: none;
+        }
+
+        .delete:hover {
+            box-shadow: none;
+            transform: none;
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        /* Chatbot */
+        .chat-container {
+            margin-top: 30px;
+        }
+
+        #chatHistory {
+            height: 300px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .chat-msg {
+            padding: 12px 18px;
+            border-radius: 18px;
+            max-width: 85%;
+            font-size: 14.5px;
+            line-height: 1.5;
+            animation: popIn 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .chat-ai {
+            align-self: flex-start;
+            background: #ffffff;
+            color: var(--text-heading);
+            border-bottom-left-radius: 4px;
+            border: 1px solid var(--card-border);
+        }
+
+        .chat-user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            background: var(--input-bg);
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .chat-input-wrapper input {
+            background: transparent;
+            border: none;
+            box-shadow: none;
+        }
+
+        .chat-input-wrapper input:focus {
+            box-shadow: none;
+            background: transparent;
+        }
+
+        .chat-input-wrapper button {
+            flex: 0 0 auto;
+            padding: 10px 20px;
+            border-radius: 12px;
+            margin-top: 0;
+            box-shadow: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            padding: 30px 0;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 1024px) {
+            .content-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .results-container {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding-top: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 70px;
+                flex-direction: row;
+                align-items: center;
+                padding: 10px 20px;
+                border-right: none;
+                border-bottom: 1px solid var(--card-border);
+            }
+
+            .sidebar>div {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .subtitle,
+            .nav-item {
+                display: none;
+            }
+
+            .logout {
+                padding: 8px 15px;
+                margin: 0;
+            }
+
+            .main {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div>
+            <div class="logo">
+                <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                EduAI
+            </div>
+            <p class="subtitle">Teacher Intelligence Panel</p>
+
+            <div class="nav-item active">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+                Dashboard
+            </div>
+        </div>
+
+        <button class="logout" onclick="logout()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                </path>
+            </svg>
+            Logout
+        </button>
+
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="content-wrapper">
+            <div class="header">
+                <h1>Teacher Overview</h1>
+                <p>Gain insights, monitor records, and leverage AI strategies.</p>
+            </div>
+
+            <div class="card" style="grid-column: 1;">
+                <h2>Student Performance Analysis</h2>
+
+                <div class="form-grid">
+                    <input id="roll" placeholder="Roll Number">
+                    <input id="name" placeholder="Student Name">
+                    <input id="attendance" type="number" placeholder="Attendance %">
+                    <input id="tamil" type="number" placeholder="Tamil Marks">
+                    <input id="english" type="number" placeholder="English Marks">
+                    <input id="maths" type="number" placeholder="Maths Marks">
+                    <input id="physics" type="number" placeholder="Physics Marks">
+                    <input id="chemistry" type="number" placeholder="Chemistry Marks">
+                </div>
+                <br>
+
+                <div class="action-buttons" style="display:flex; gap:15px; margin-bottom:10px;">
+                    <button onclick="analyze()">Analyze Performance</button>
+                    <button class="save" onclick="saveStudent()">Save Student</button>
+                </div>
+
+                <div id="resultsContainer" class="results-container">
+                    <div id="result"></div>
+                    <div class="chart-container">
+                        <canvas id="chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div style="grid-column: 2; display: flex; flex-direction: column; gap: 30px;">
+                <div class="card">
+                    <h3>Saved Students</h3>
+                    <div id="studentList"></div>
+                </div>
+
+                <div class="card">
+                    <h3>💬 AI Strategy Chatbot</h3>
+                    <div style="display: flex; flex-direction: column;">
+                        <div id="chatHistory"
+                            style="height: 250px; background: var(--input-bg); border-radius: 16px; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                            <div class="chat-msg chat-ai">
+                                Hello Teacher! Give me a student's marks and attendance (e.g., "75 80" or "marks 75
+                                attendance 80") and I will recommend strategies.
+                            </div>
+                        </div>
+
+                        <div class="chat-input-wrapper">
+                            <input id="chatInput" placeholder="e.g., marks 85 attendance 90" style="flex: 1;"
+                                onkeypress="event.key === 'Enter' && processChat()">
+                            <button onclick="processChat()">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (localStorage.getItem("role") !== "teacher") {
+            window.location.href = "index.html";
+        }
+
+        let students = [];
+        let chart;
+        let token = localStorage.getItem("token");
+
+        // --- Fetch Array from SQL ---
+        async function fetchStudents() {
+            try {
+                let res = await fetch('/api/students', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    students = await res.json();
+                    displayStudents();
+                } else {
+                    console.error("Failed to authenticate API.");
+                }
+            } catch (err) {
+                console.error("Server API unreachable.");
+            }
+        }
+
+        // Initialize API call on boot
+        fetchStudents();
+
+
+        const strategyNet = new brain.NeuralNetwork({ hiddenLayers: [6] });
+        strategyNet.train([
+            { input: { avg: 0.20, att: 0.30 }, output: { profile1: 1 } },
+            { input: { avg: 0.40, att: 0.85 }, output: { profile2: 1 } },
+            { input: { avg: 0.50, att: 0.60 }, output: { profile3: 1 } },
+            { input: { avg: 0.65, att: 0.85 }, output: { profile4: 1 } },
+            { input: { avg: 0.70, att: 0.75 }, output: { profile5: 1 } },
+            { input: { avg: 0.85, att: 0.50 }, output: { profile6: 1 } },
+            { input: { avg: 0.90, att: 0.90 }, output: { profile7: 1 } },
+            { input: { avg: 0.98, att: 0.95 }, output: { profile8: 1 } }
+        ]);
+
+        const strategyMap = {
+            "profile1": ["🚨 Urgent academic intervention", "📞 Parent-teacher counseling", "🧩 Foundational skills rebuilding"],
+            "profile2": ["💡 Alternative teaching methods (Visual/Audio)", "🤝 Pair programming/study buddies", "⚙️ Focus on practical applications"],
+            "profile3": ["🟡 Weekly practice tests", "📚 Guided learning sessions", "👥 Peer discussion learning"],
+            "profile4": ["🎯 Goal-setting workshops", "📝 Detailed feedback on assignments", "🔍 Critical thinking exercises"],
+            "profile5": ["🟢 Problem solving activities", "📊 Group discussion learning", "📗 Subject enrichment"],
+            "profile6": ["⚠️ Attendance monitoring program", "💻 Remote learning assignments", "🔗 Connecting topics to real-world value"],
+            "profile7": ["🏆 Advanced learning materials", "🚀 Competitive exam preparation", "👑 Leadership activities"],
+            "profile8": ["🌟 Research project opportunities", "🎓 Peer tutoring roles", "🧠 Independent study programs"]
+        };
+
+        function aiRecommendation(avg, attendance) {
+            let result = strategyNet.run({ avg: avg / 100, att: attendance / 100 });
+            let highestKey = Object.keys(result).reduce((a, b) => result[a] > result[b] ? a : b);
+            return strategyMap[highestKey];
+        }
+
+        function analyze() {
+            let name = document.getElementById("name").value;
+            let attendance = Number(document.getElementById("attendance").value);
+            let tamil = Number(document.getElementById("tamil").value);
+            let english = Number(document.getElementById("english").value);
+            let maths = Number(document.getElementById("maths").value);
+            let physics = Number(document.getElementById("physics").value);
+            let chemistry = Number(document.getElementById("chemistry").value);
+            let marks = [tamil, english, maths, physics, chemistry];
+            let subjects = ["Tamil", "English", "Maths", "Physics", "Chemistry"];
+            let avg = marks.reduce((a, b) => a + b, 0) / marks.length;
+
+            let strategies = aiRecommendation(avg, attendance);
+            let weak = marks
+                .map((m, i) => ({ m, i }))
+                .sort((a, b) => a.m - b.m)
+                .slice(0, 2)
+                .map(s => `📘 Extra support needed in ${subjects[s.i]}`);
+            let finalStrategies = [...strategies, ...weak];
+
+            document.getElementById("result").innerHTML = `
+                <h3>${name || 'Student Overview'}</h3>
+                <div>
+                    <span class="metric-badge">Avg: <b>${avg.toFixed(1)}%</b></span>
+                    <span class="metric-badge">Att: <b>${attendance}%</b></span>
+                </div>
+                <h4>🤖 AI Strategy</h4>
+                ${finalStrategies.map(s => "<div style='margin-bottom: 6px;'>• " + s + "</div>").join("")}
+            `;
+
+            chart && chart.destroy();
+
+            Chart.defaults.color = '#64748b'; // Light mode chart font
+            Chart.defaults.font.family = "'Outfit', sans-serif";
+
+            chart = new Chart(document.getElementById("chart"), {
+                type: "radar",
+                data: {
+                    labels: subjects,
+                    datasets: [{
+                        label: "Marks",
+                        data: marks,
+                        backgroundColor: "rgba(37, 99, 235, 0.15)",
+                        borderColor: "rgba(37, 99, 235, 1)",
+                        pointBackgroundColor: "#ffffff",
+                        pointBorderColor: "rgba(37, 99, 235, 1)",
+                        pointHoverBackgroundColor: "#fff",
+                        pointHoverBorderColor: "rgba(37, 99, 235, 1)"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: "rgba(0, 0, 0, 0.05)" },
+                            angleLines: { color: "rgba(0, 0, 0, 0.05)" },
+                            pointLabels: { color: "#64748b", font: { family: "'Outfit', sans-serif", size: 12, weight: 500 } },
+                            ticks: { display: false }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById("resultsContainer").classList.add("active");
+        }
+
+        async function saveStudent() {
+            let student = {
+                roll: document.getElementById("roll").value,
+                name: document.getElementById("name").value,
+                attendance: document.getElementById("attendance").value,
+                tamil: document.getElementById("tamil").value,
+                english: document.getElementById("english").value,
+                maths: document.getElementById("maths").value,
+                physics: document.getElementById("physics").value,
+                chemistry: document.getElementById("chemistry").value
+            };
+
+            try {
+                let res = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(student)
+                });
+
+                if (res.ok) {
+                    await fetchStudents();
+                    alert("Student saved to database successfully.");
+                } else {
+                    alert("Failed to save to database. Are you authorized?");
+                }
+            } catch (e) {
+                alert("Server error when saving to database.");
+            }
+        }
+
+        function displayStudents() {
+            let list = document.getElementById("studentList");
+            let renderEmpty = () => { list.innerHTML = `<div class="empty-state">No students saved yet</div>`; };
+            let renderList = () => {
+                list.innerHTML = "";
+                students.forEach((s, i) => {
+                    let initials = s.name ? s.name.substring(0, 2).toUpperCase() : "ST";
+                    list.innerHTML += `
+                    <div class="student-item" onclick="loadStudent(${i})">
+                        <div class="student-info">
+                            <div class="student-avatar">${initials}</div>
+                            <div>
+                                <div style="font-weight: 600; color: #0f172a;">${s.name || 'Unnamed'} (${s.roll || 'No Roll'})</div>
+                                <div style="font-size: 13px; color: var(--text-muted);">Att: ${s.attendance}%</div>
+                            </div>
+                        </div>
+                        <button class="delete" onclick="event.stopPropagation();deleteStudent('${s.roll}')" title="Remove Student">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                });
+            };
+            (students.length === 0) ? renderEmpty() : renderList();
+        }
+
+        function loadStudent(i) {
+            let s = students[i];
+            document.getElementById("roll").value = s.roll || "";
+            document.getElementById("name").value = s.name || "";
+            document.getElementById("attendance").value = s.attendance || "";
+            document.getElementById("tamil").value = s.tamil || "";
+            document.getElementById("english").value = s.english || "";
+            document.getElementById("maths").value = s.maths || "";
+            document.getElementById("physics").value = s.physics || "";
+            document.getElementById("chemistry").value = s.chemistry || "";
+            analyze();
+        }
+
+        async function deleteStudent(rollStr) {
+            try {
+                let res = await fetch('/api/students/' + rollStr, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (res.ok) {
+                    await fetchStudents();
+                } else {
+                    alert("Unauthorized to delete.");
+                }
+            } catch (e) {
+                alert("Server error connecting to API");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem("role");
+            localStorage.removeItem("token");
+            window.location.href = "/";
+        }
+
+        const nlpNet = new brain.recurrent.LSTM();
+        nlpNet.train([
+            { input: "hello", output: "greeting" },
+            { input: "hi there", output: "greeting" },
+            { input: "help me", output: "help" },
+            { input: "how to use", output: "help" },
+            { input: "student marks", output: "analysis" },
+            { input: "attendance and marks", output: "analysis" },
+            { input: "85 90", output: "analysis" }
+        ], { iterations: 100 });
+
+        const intentResponses = {
+            "greeting": "Hello! I am the AI Strategy Assistant powered by Machine Learning. Tell me a student's marks and attendance.",
+            "help": "Simply type a student's marks and attendance like '85 90' to get an ML-driven teaching strategy."
+        };
+
+        function processChat() {
+            let inputField = document.getElementById("chatInput");
+            let input = inputField.value;
+            let chatHistory = document.getElementById("chatHistory");
+
+            let processValidInput = () => {
+                let intent = nlpNet.run(input.toLowerCase());
+                (intent === "") && (intent = "analysis");
+
+                let renderAnalysis = () => {
+                    let numbers = (input.match(/\d+/g) || [0, 0]).map(Number);
+                    let marks = numbers[0] || 0;
+                    let attendance = numbers[1] || 0;
+                    let recommendations = aiRecommendation(marks, attendance);
+                    return `Analysis for Marks: ${marks}% | Attendance: ${attendance}%<br><br>${recommendations.map(r => "• " + r).join('<br>')}`;
+                };
+
+                let aiMsgContent = intentResponses[intent] || renderAnalysis();
+
+                let userHtml = `<div class="chat-msg chat-user">${input}</div>`;
+                let aiHtml = `<div class="chat-msg chat-ai">${aiMsgContent}</div>`;
+
+                chatHistory.innerHTML += userHtml + aiHtml;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+                inputField.value = "";
+            };
+
+            (input.trim().length > 0) && processValidInput();
+        }
+    </script>
+</body>
+
+</html>
