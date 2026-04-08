@@ -147,6 +147,8 @@ def seed_db():
         db.session.commit()
         print("Database Initialized and Seeded.")
 
+# Initialize database and seed on startup (for Render/Gunicorn)
+seed_db()
+
 if __name__ == '__main__':
-    seed_db()
     app.run(debug=True, port=5000)
