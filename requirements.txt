@@ -2,4 +2,3 @@ Flask
 Flask-SQLAlchemy
 PyJWT
 Flask-Cors
-gunicorn
